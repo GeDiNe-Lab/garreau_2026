@@ -66,6 +66,18 @@ patient_ids <- read.csv("article/transit_data/patient_ids.csv", stringsAsFactors
 names(HPE_patient_variants) <- patient_ids
 colnames(HPE_results) <- patient_ids # appariement explicite patient <-> colonne RWR
 
+# ============================================================
+# Numerotation anonyme des patients (1, 2, 3, ...), utilisee a la
+# place de l'identifiant patient dans les colonnes de recap
+# destinees au biologiste (variant_diag_patients / variant_refined_patients).
+# L'ordre suit celui de patient_ids.csv (stable, reproductible).
+# Cette table de correspondance est sauvegardee a part, dans
+# transit_data (PAS dans article/tables/), pour ne pas exposer les
+# identifiants patients dans les tables destinees a l'article.
+# ============================================================
+patient_number_map <- setNames(seq_along(patient_ids), patient_ids)
+save(patient_number_map, file = "article/transit_data/patient_number_map.RData")
+
 HPE_seeds <- lapply(HPE_patient_variants, function(df) {
     filter(df, Gene.refGeneWithVer %in% coex_genes)$Gene.refGeneWithVer
 })
@@ -415,12 +427,18 @@ nrow(full_cohort_network)
 #     variant (seed strict) > variant_diag > variant_refined > none
 #  + details utiles au biologiste : nb et liste des patients
 #    apportant une preuve supplementaire (refined / diag)
+#
+#  Les patients sont identifies par un NUMERO (1, 2, 3, ...),
+#  via patient_number_map (cf. section 0), plutot que par leur
+#  identifiant d'origine, dans les colonnes de recap destinees
+#  au biologiste (variant_diag_patients / variant_refined_patients).
 # ============================================================
 
 all_new_variants <- purrr::imap_dfr(patient_variants_new, function(df, pid) {
     df %>% mutate(patient = pid)
 }) %>%
-    filter(variant_type != "seed") # uniquement les preuves supplementaires
+    filter(variant_type != "seed") %>% # uniquement les preuves supplementaires
+    mutate(patient = patient_number_map[patient]) # identifiant -> numero anonyme
 
 variant_evidence_by_gene <- all_new_variants %>%
     group_by(gene = Gene.refGeneWithVer, variant_type) %>%
@@ -595,9 +613,13 @@ full_cohort_network <- full_cohort_network %>%
 #   - isolated_low_confidence : aucune ancre credible dans le reseau
 #                          (cf. section 7bis)
 #   - variant_diag_n_patients / variant_diag_patients       : preuve
-#     clinique supplementaire (gene diagnostique connu, filtres assouplis)
+#     clinique supplementaire (gene diagnostique connu, filtres assouplis).
+#     variant_diag_patients contient des NUMEROS de patients
+#     (cf. patient_number_map, section 0), pas les identifiants d'origine.
 #   - variant_refined_n_patients / variant_refined_patients : preuve
-#     reseau supplementaire (gene signal, PRED_value_reworked >= 0.7)
+#     reseau supplementaire (gene signal, PRED_value_reworked >= 0.7).
+#     variant_refined_patients contient des NUMEROS de patients,
+#     meme logique que ci-dessus.
 # ============================================================
 
 node_recap <- full_cohort_network %>%
@@ -636,6 +658,22 @@ write.csv(
     "article/tables/Figure_4/HPE_full_cohort_signal_seed_node_recap_refined.csv",
     row.names = FALSE, quote = FALSE
 )
+
+library(openxlsx)
+
+wb <- createWorkbook()
+addWorksheet(wb, "node_recap")
+
+writeData(wb, "node_recap", node_recap, headerStyle = createStyle(textDecoration = "bold"))
+freezePane(wb, "node_recap", firstRow = TRUE)
+setColWidths(wb, "node_recap", cols = seq_len(ncol(node_recap)), widths = "auto")
+
+saveWorkbook(
+    wb,
+    "article/tables/Figure_4/HPE_full_cohort_signal_seed_node_recap_refined.xlsx",
+    overwrite = TRUE
+)
+
 
 nrow(full_cohort_network)
 nrow(node_recap)

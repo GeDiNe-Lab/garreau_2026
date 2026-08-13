@@ -7,6 +7,11 @@
 # `cohorts` list, to avoid code duplication from the previous
 # version. Each block also produces a recap table intended for
 # direct reading by the biologist.
+#
+# Every recap/summary table is exported BOTH as .csv (existing
+# write_csv/write.csv calls, unchanged) AND as a single-sheet .xlsx
+# (write_single_xlsx()) with bold header, frozen header row, and
+# auto column width.
 # ============================================================
 
 library(Matrix)
@@ -24,6 +29,7 @@ library(ComplexHeatmap)
 library(plotly)
 library(WebGestaltR)
 library(scales)
+library(openxlsx)
 
 rstudioapi::getSourceEditorContext()$path %>%
     str_split("/") %>%
@@ -42,6 +48,23 @@ dir.create("article/figures/Figure_3", recursive = TRUE, showWarnings = FALSE)
 dir.create("article/tables/Figure_3", recursive = TRUE, showWarnings = FALSE)
 
 seed_color_palette <- c("#1dea65", "#2bbe8b", "#24a5a3", "#376d9c", "#1a2a47")
+
+# ============================================================
+# write_single_xlsx()
+# ------------------------------------------------------------
+# Exports a single data frame to a single-sheet .xlsx file, with
+# a bold header row, a frozen header row, and auto-fit column
+# widths -- used throughout this script as the .xlsx counterpart
+# to write_csv()/write.csv().
+# ============================================================
+write_single_xlsx <- function(df, path, sheet_name = "Sheet1") {
+    wb <- createWorkbook()
+    addWorksheet(wb, sheet_name)
+    writeData(wb, sheet_name, df, headerStyle = createStyle(textDecoration = "bold"))
+    freezePane(wb, sheet_name, firstRow = TRUE)
+    setColWidths(wb, sheet_name, cols = seq_len(ncol(df)), widths = "auto")
+    saveWorkbook(wb, path, overwrite = TRUE)
+}
 
 # ============================================================
 # 0. Data loading (once)
@@ -440,6 +463,7 @@ ggsave("article/figures/Figure_3/Figure_3A_HPE_zscore_distribution.png", plot = 
 ggsave("article/figures/Figure_3/Figure_3A_IOP_zscore_distribution.png", plot = gene_score_plots[["IOP"]], width = 14, height = 8, dpi = 300)
 
 write_csv(gene_score_recap, "article/tables/Figure_3/Figure_3A_gene_score_recap.csv")
+write_single_xlsx(gene_score_recap, "article/tables/Figure_3/Figure_3A_gene_score_recap.xlsx", "gene_score_recap")
 
 
 # ============================================================
@@ -496,6 +520,7 @@ rank_vs_degree_recap <- imap(all_dfs, function(df, cname) {
     bind_rows()
 
 write_csv(rank_vs_degree_recap, "article/tables/Figure_3/Figure_3X_rank_vs_degree_recap.csv")
+write_single_xlsx(rank_vs_degree_recap, "article/tables/Figure_3/Figure_3X_rank_vs_degree_recap.xlsx", "rank_vs_degree_recap")
 
 for (cname in names(cohorts)) {
     co <- cohorts[[cname]]
@@ -518,9 +543,10 @@ for (cname in names(cohorts)) {
 # The PLOT stays limited to the top 25 (readability), but the
 # exported TABLE contains ALL enriched terms (no truncation), so
 # the biologist can explore the full result set beyond what is
-# visually displayed.
+# visually displayed. Each table is exported as both .csv and
+# .xlsx.
 # If no term is enriched (common for IOP, few signal genes) or if
-# the WebGestalt call fails, both the plot AND the table are
+# the WebGestalt call fails, the plot AND both table formats are
 # skipped for that cohort/database combination -> no file
 # produced, just a message.
 # ============================================================
@@ -559,5 +585,10 @@ for (cname in names(cohorts)) {
         table_full <- ora_result %>%
             dplyr::arrange(dplyr::desc(enrichmentRatio))
         write.csv(table_full, paste0("article/tables/Figure_3/ORA_", db_slug, "_", cname, "_full.csv"), row.names = FALSE)
+        write_single_xlsx(
+            table_full,
+            paste0("article/tables/Figure_3/ORA_", db_slug, "_", cname, "_full.xlsx"),
+            paste0(db_slug, "_", cname)
+        )
     }
 }

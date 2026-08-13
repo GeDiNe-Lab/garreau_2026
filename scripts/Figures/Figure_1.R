@@ -155,3 +155,19 @@ write_csv(gene_network_summary, "article/tables/Figure_1/gene_network_summary.cs
 write_csv(GO_enrichment_summary, "article/tables/Figure_1/GO_BP_enrichment_summary.csv")
 write_csv(HPO_enrichment_summary, "article/tables/Figure_1/HPO_enrichment_summary.csv")
 write_csv(reactome_enrichment_summary, "article/tables/Figure_1/reactome_enrichment_summary.csv")
+
+library(openxlsx)
+
+write_single_xlsx <- function(df, path, sheet_name = "Sheet1") {
+    wb <- createWorkbook()
+    addWorksheet(wb, sheet_name)
+    writeData(wb, sheet_name, df, headerStyle = createStyle(textDecoration = "bold"))
+    freezePane(wb, sheet_name, firstRow = TRUE)
+    setColWidths(wb, sheet_name, cols = seq_len(ncol(df)), widths = "auto")
+    saveWorkbook(wb, path, overwrite = TRUE)
+}
+
+write_single_xlsx(gene_network_summary, "article/tables/Figure_1/gene_network_summary.xlsx", "gene_network_summary")
+write_single_xlsx(GO_enrichment_summary, "article/tables/Figure_1/GO_BP_enrichment_summary.xlsx", "GO_BP_enrichment")
+write_single_xlsx(HPO_enrichment_summary, "article/tables/Figure_1/HPO_enrichment_summary.xlsx", "HPO_enrichment")
+write_single_xlsx(reactome_enrichment_summary, "article/tables/Figure_1/reactome_enrichment_summary.xlsx", "reactome_enrichment")

@@ -371,6 +371,29 @@ write_csv(IOP_seeds_GO_summary, "article/tables/Figure_2/IOP_seeds_GO_summary.cs
 write_csv(HPE_seeds_HPO_summary, "article/tables/Figure_2/HPE_seeds_HPO_summary.csv")
 write_csv(IOP_seeds_HPO_summary, "article/tables/Figure_2/IOP_seeds_HPO_summary.csv")
 
+library(openxlsx)
+
+write_single_xlsx <- function(df, path, sheet_name = "Sheet1") {
+    wb <- createWorkbook()
+    addWorksheet(wb, sheet_name)
+    writeData(wb, sheet_name, df, headerStyle = createStyle(textDecoration = "bold"))
+    freezePane(wb, sheet_name, firstRow = TRUE)
+    setColWidths(wb, sheet_name, cols = seq_len(ncol(df)), widths = "auto")
+    saveWorkbook(wb, path, overwrite = TRUE)
+}
+
+write_single_xlsx(seed_count_per_patient, "article/tables/Figure_2/seed_count_per_patient.xlsx", "seed_count_per_patient")
+write_single_xlsx(HPE_variant_function_summary, "article/tables/Figure_2/HPE_variant_function_summary.xlsx", "HPE_variant_function")
+write_single_xlsx(IOP_variant_function_summary, "article/tables/Figure_2/IOP_variant_function_summary.xlsx", "IOP_variant_function")
+write_single_xlsx(HPE_CLNSIG_summary, "article/tables/Figure_2/HPE_CLNSIG_summary.xlsx", "HPE_CLNSIG")
+write_single_xlsx(IOP_CLNSIG_summary, "article/tables/Figure_2/IOP_CLNSIG_summary.xlsx", "IOP_CLNSIG")
+write_single_xlsx(HPE_PRED_effect_summary, "article/tables/Figure_2/HPE_PRED_effect_summary.xlsx", "HPE_PRED_effect")
+write_single_xlsx(IOP_PRED_effect_summary, "article/tables/Figure_2/IOP_PRED_effect_summary.xlsx", "IOP_PRED_effect")
+write_single_xlsx(HPE_seeds_GO_summary, "article/tables/Figure_2/HPE_seeds_GO_summary.xlsx", "HPE_seeds_GO")
+write_single_xlsx(IOP_seeds_GO_summary, "article/tables/Figure_2/IOP_seeds_GO_summary.xlsx", "IOP_seeds_GO")
+write_single_xlsx(HPE_seeds_HPO_summary, "article/tables/Figure_2/HPE_seeds_HPO_summary.xlsx", "HPE_seeds_HPO")
+write_single_xlsx(IOP_seeds_HPO_summary, "article/tables/Figure_2/IOP_seeds_HPO_summary.xlsx", "IOP_seeds_HPO")
+
 # ============================================================
 # Seed frequency per gene (post network filtering), HPE vs IOP
 # ------------------------------------------------------------
@@ -403,3 +426,4 @@ seed_freq <- full_join(HPE_seed_freq, IOP_seed_freq, by = "gene") %>%
     arrange(desc(n_seed_HPE + n_seed_IOP))
 
 write_csv(seed_freq, "article/tables/Figure_2/seed_freq.csv")
+write_single_xlsx(seed_freq, "article/tables/Figure_2/seed_freq.xlsx", "seed_freq")
