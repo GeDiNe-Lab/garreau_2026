@@ -1,0 +1,2 @@
+"geneSet","description","link","size","overlap","expect","enrichmentRatio","pValue","FDR","overlapId","userId"
+"HP:0010936","Abnormality of the lower urinary tract","https://hpo.jax.org/app/browse/term/HP:0010936",823,14,3.82249596122779,3.6625283955835,2.06025664038933e-06,0.0132309681445803,"10297;8912;23345;6335;182;4176;54453;23363;5426;2222;3955;5723;341640;80144","SYNE1;MCM7;PSPH;LFNG;FREM2;POLE;FRAS1;CACNA1H;SCN9A;OBSL1;JAG1;RIN2;FDFT1;APC2"
