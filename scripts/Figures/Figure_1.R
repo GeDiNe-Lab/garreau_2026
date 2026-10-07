@@ -8,13 +8,8 @@ library(ggplot2)
 library(stats)
 
 # Setting working directory
-rstudioapi::getSourceEditorContext()$path %>%
-    str_split("/") %>%
-    unlist() %>%
-    head(-4) %>%
-    str_c(collapse = "/") %>%
-    str_c("/") %>%
-    setwd()
+setwd(paste(here::here(), "projects", sep = "/"))
+
 
 # Loading custom functions
 source("article/scripts/custom_fct.R")
@@ -90,40 +85,22 @@ top_genes_500 <- centrality_matrix %>%
     slice_head(n = 500) %>%
     pull(node)
 
-GO_enrichment_results <- run_ora_gobp(
-    genelist = top_genes_500,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000,
-    noRedundant = TRUE
-)
+GO_enrichment_results <- run_ora_gobp(top_genes_500)
+
 GO_plot <- plot_ora_dotplot(
     ora_results = GO_enrichment_results,
     n = 20
 )
 ggsave("article/figures/Figure_1/GO_BP_enrichment_top500_network.png", plot = GO_plot, width = 10, height = 6, dpi = 300)
 
-HPO_enrichment_results <- run_ora_hpo(
-    genelist = top_genes_500,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000
-)
+HPO_enrichment_results <- run_ora_hpo(top_genes_500)
 HPO_plot <- plot_ora_dotplot(
     ora_results = HPO_enrichment_results,
     n = 20
 )
 ggsave("article/figures/Figure_1/HPO_enrichment_top500_network.png", plot = HPO_plot, width = 10, height = 6, dpi = 300)
 
-reactome_enrichment_results <- run_ora_reactome(
-    genelist = top_genes_500,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000
-)
+reactome_enrichment_results <- run_ora_reactome(top_genes_500)
 reactome_plot <- plot_ora_dotplot(
     ora_results = reactome_enrichment_results,
     n = 20
@@ -131,7 +108,6 @@ reactome_plot <- plot_ora_dotplot(
 ggsave("article/figures/Figure_1/reactome_enrichment_top500_network.png", plot = reactome_plot, width = 10, height = 6, dpi = 300)
 
 # ---- Figure 1 summary dataframes ----
-
 gene_network_summary <- centrality_matrix %>%
     mutate(
         top50 = node %in% top_genes_degree$node,
@@ -171,3 +147,18 @@ write_single_xlsx(gene_network_summary, "article/tables/Figure_1/gene_network_su
 write_single_xlsx(GO_enrichment_summary, "article/tables/Figure_1/GO_BP_enrichment_summary.xlsx", "GO_BP_enrichment")
 write_single_xlsx(HPO_enrichment_summary, "article/tables/Figure_1/HPO_enrichment_summary.xlsx", "HPO_enrichment")
 write_single_xlsx(reactome_enrichment_summary, "article/tables/Figure_1/reactome_enrichment_summary.xlsx", "reactome_enrichment")
+
+# ---- Figure 1D (supp): subnetwork / connected component size table ----
+
+g_components <- components(g)
+
+subnetwork_size_summary <- tibble(
+    subnetwork = names(table(g_components$membership)),
+    size = as.integer(table(g_components$membership))
+) %>%
+    arrange(desc(size))
+
+write_csv(subnetwork_size_summary, "article/tables/Figure_1/subnetwork_size_summary.csv")
+write_single_xlsx(subnetwork_size_summary, "article/tables/Figure_1/subnetwork_size_summary.xlsx", "subnetwork_size_summary")
+
+View(subnetwork_size_summary)

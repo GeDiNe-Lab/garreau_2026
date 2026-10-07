@@ -31,13 +31,7 @@ library(WebGestaltR)
 library(scales)
 library(openxlsx)
 
-rstudioapi::getSourceEditorContext()$path %>%
-    str_split("/") %>%
-    unlist() %>%
-    head(-4) %>%
-    str_c(collapse = "/") %>%
-    str_c("/") %>%
-    setwd()
+setwd(paste(here::here(), "projects", sep = "/"))
 
 source("article/scripts/custom_fct.R")
 source("article/scripts/RECENT_patient_gene_pvalue.R") # process_group() / process_patient()
@@ -124,7 +118,7 @@ centrality_df <- data.frame(
 # ============================================================
 
 get_signal_genes <- function(RWR_results, seeds, permutation_bank) {
-    group_stats <- process_group(RWR_results = RWR_results, seeds = seeds, permutation_bank = permutation_bank)
+    group_stats <- process_profiles(RWR_results = RWR_results, seeds = seeds, permutation_bank = permutation_bank)
     signal_genes <- group_stats %>%
         filter(signal_final) %>%
         arrange(desc(mean_score_raw)) %>%
@@ -137,6 +131,8 @@ cohorts <- list(
     IOP = list(results = IOP_results, seeds = IOP_seeds, color = "#A23B72", label = "IOP / control")
 )
 
+source("article/scripts/RECENT_patient_gene_pvalue.R") # process_group() / process_patient()
+
 cohorts <- imap(cohorts, function(co, cname) {
     res <- get_signal_genes(co$results, co$seeds, bank)
     co$group_stats <- res$group_stats
@@ -144,6 +140,7 @@ cohorts <- imap(cohorts, function(co, cname) {
     cat(cname, ": ", length(co$signal_genes), " signal genes\n", sep = "")
     co
 })
+
 
 
 # ============================================================

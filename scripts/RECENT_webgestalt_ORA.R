@@ -9,7 +9,7 @@ library(WebGestaltR)
 # Loading custom functions
 source("article/scripts/custom_fct.R")
 run_ora_hpo <- function(genelist, referenceGene = NULL, referenceSet = "genome_protein-coding",
-                        interestGeneType = "genesymbol", fdrThr = 0.05, minNum = 5, maxNum = 2000) {
+                        interestGeneType = "genesymbol", fdrThr = 0.05, minNum = 9, maxNum = 500) {
     #' ORA enrichment on Human Phenotype Ontology (HPO)
     #'
     #' @return A data frame containing the HPO enrichment results.
@@ -25,8 +25,11 @@ run_ora_hpo <- function(genelist, referenceGene = NULL, referenceSet = "genome_p
         minNum = minNum,
         maxNum = maxNum,
         sigMethod = "fdr",
+        fdrMethod = "BH",
         fdrThr = fdrThr,
-        isOutput = FALSE
+        isOutput = FALSE,
+        useWeightedSetCover = FALSE,
+        usekMedoid = FALSE
     )
 
     if (!is.null(referenceGene)) {
@@ -43,7 +46,7 @@ run_ora_hpo <- function(genelist, referenceGene = NULL, referenceSet = "genome_p
 
 
 run_ora_gobp <- function(genelist, referenceGene = NULL, referenceSet = "genome_protein-coding",
-                         interestGeneType = "genesymbol", fdrThr = 0.05, minNum = 5, maxNum = 2000,
+                         interestGeneType = "genesymbol", fdrThr = 0.05, minNum = 9, maxNum = 500,
                          noRedundant = TRUE) {
     #' ORA enrichment on Gene Ontology - Biological Process (GO-BP)
     #'
@@ -84,7 +87,7 @@ run_ora_gobp <- function(genelist, referenceGene = NULL, referenceSet = "genome_
 
 
 run_ora_reactome <- function(genelist, referenceGene = NULL, referenceSet = "genome_protein-coding",
-                             interestGeneType = "genesymbol", fdrThr = 0.05, minNum = 5, maxNum = 2000) {
+                             interestGeneType = "genesymbol", fdrThr = 0.05, minNum = 9, maxNum = 500) {
     #' ORA enrichment on REACTOME pathways
     #'
     #' @return A data frame containing the REACTOME enrichment results.

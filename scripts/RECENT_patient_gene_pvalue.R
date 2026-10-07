@@ -21,11 +21,11 @@ source("article/scripts/RECENT_rwr_normalization.R") # build_permutation_bank() 
 my_locfdr_robust <- function(z) {
     z <- z[is.finite(z) & !is.na(z)]
 
-    # --- Garde-fous : pas assez de points, ou distribution degeneree ---
+    # --- Safeguards: not enough points, or degenerate distribution ---
     if (length(z) < 30) {
         message(
-            "my_locfdr_robust : moins de 30 valeurs finies (", length(z),
-            "), N(0,1) utilisee sans scaling robuste"
+            "my_locfdr_robust: fewer than 30 finite values (", length(z),
+            "), using N(0,1) without robust scaling"
         )
         log_pval <- pnorm(z, mean = 0, sd = 1, lower.tail = FALSE, log.p = TRUE)
         names(log_pval) <- names(z)
@@ -35,8 +35,8 @@ my_locfdr_robust <- function(z) {
     mad_z <- mad(z)
     if (!is.finite(mad_z) || mad_z == 0) {
         message(
-            "my_locfdr_robust : MAD nul ou non fini (distribution degeneree, ",
-            "trop de valeurs identiques) — fallback N(0,1) sur z brut"
+            "my_locfdr_robust: MAD is zero or non-finite (degenerate distribution, ",
+            "too many identical values) - fallback to N(0,1) on raw z"
         )
         log_pval <- pnorm(z, mean = 0, sd = 1, lower.tail = FALSE, log.p = TRUE)
         names(log_pval) <- names(z)
@@ -51,9 +51,9 @@ my_locfdr_robust <- function(z) {
     counts <- as.numeric(table(cut(z_rob, breaks = breaks, include.lowest = TRUE)))
     bin_width <- diff(breaks)[1]
 
-    # --- Garde-fou supplementaire : bin_width nul (min == max apres arrondi) ---
+    # --- Additional safeguard: zero bin_width (min == max after rounding) ---
     if (!is.finite(bin_width) || bin_width == 0) {
-        message("my_locfdr_robust : bin_width nul — fallback N(0,1) sur z brut")
+        message("my_locfdr_robust: bin_width is zero - fallback to N(0,1) on raw z")
         log_pval <- pnorm(z, mean = 0, sd = 1, lower.tail = FALSE, log.p = TRUE)
         names(log_pval) <- names(z)
         return(log_pval)
@@ -69,7 +69,7 @@ my_locfdr_robust <- function(z) {
     valid <- central & is.finite(f_hat) & f_hat > 0
 
     if (sum(valid) < 3) {
-        message("Pas assez de bins valides pour estimer la null — N(0,1) utilisée")
+        message("Not enough valid bins to estimate the null - N(0,1) used")
         mu0 <- 0
         sigma0 <- 1
     } else {
@@ -78,6 +78,10 @@ my_locfdr_robust <- function(z) {
         b <- coef(fit_null)[2]
 
         if (is.na(cc) || cc >= 0) {
+            message(
+                "my_locfdr_robust: invalid quadratic coefficient (c = ", round(cc, 4),
+                ", not concave or NA) - fallback to N(0,1) on robust z"
+            )
             mu0 <- 0
             sigma0 <- 1
         } else {
@@ -87,119 +91,91 @@ my_locfdr_robust <- function(z) {
     }
 
     log_pval <- pnorm(z_rob, mean = mu0, sd = sigma0, lower.tail = FALSE, log.p = TRUE)
+    message(
+        "my_locfdr_robust: empirical null estimated successfully (mu0 = ", round(mu0, 4),
+        ", sigma0 = ", round(sigma0, 4), ", n = ", N, ")"
+    )
     return(log_pval)
 }
 
 
 # ============================================================
-# process_patient()
+# process_profiles()
 # ------------------------------------------------------------
-# CHANGEMENT : HPE_results est desormais attendu en scores RWR
-# BRUTS (plus de Z-score en amont). La normalisation se fait ici,
-# au niveau du patient (N = 1), via la banque de permutations
-# precalculee (build_permutation_bank), reutilisee sans recalcul RWR.
+# Replaces process_patient() and process_group(). Same signature
+# as the former process_group() so existing call sites do not
+# break. Handles a single profile or a group of profiles in a
+# unified way:
+#   - patient_ids of length 1  -> equivalent to the former
+#     process_patient() (but with seed imputation to the median,
+#     no exclusion of seeds)
+#   - patient_ids of length > 1 -> equivalent to the former
+#     process_group()
+#
+# In both cases: seed scores are imputed to the median of the
+# non-seed scores (per patient, on raw scores), then the genes x
+# N patients matrix (N >= 1) is passed to normalize_rwr_score(),
+# which averages the patients AND builds a null matched on N by
+# resampling the precomputed permutation bank (no RWR recomputation,
+# N = 1 included).
+#
+# The FDR computation logic (my_locfdr_robust, BH, quantile
+# threshold) is unchanged from the former process_group().
 # ============================================================
-process_patient <- function(patient_id, HPE_results, HPE_seeds, permutation_bank) {
-    print(paste("Processing patient:", patient_id))
-
-    # Extraction des scores bruts sans seeds
-    score_wo_seeds <- HPE_results[
-        !rownames(HPE_results) %in% HPE_seeds[[patient_id]],
-        patient_id
-    ]
-
-    # Filtre NA
-    if (all(is.na(score_wo_seeds))) {
-        message("Patient ", patient_id, " : que des NA, ignoré")
-        return(NULL)
-    }
-    score_wo_seeds <- score_wo_seeds[!is.na(score_wo_seeds)]
-
-    # --- Normalisation Z-score via banque de permutations (niveau patient unique, N = 1) ---
-    z_scores <- normalize_rwr_score(
-        score_wo_seeds,
-        permutation_bank = permutation_bank,
-        verbose = FALSE
-    )
-
-    # Log p-values + correction, calcules sur les scores normalises
-    log_pvalues <- my_locfdr_robust(z_scores)
-    pvalues_safe <- exp(pmax(log_pvalues, -745))
-    pvalues_corrected <- p.adjust(pvalues_safe, method = "BH")
-    threshold_95 <- quantile(z_scores, 0.90, na.rm = TRUE)
-
-    data.frame(
-        patient = patient_id,
-        gene = names(z_scores),
-        score_raw = score_wo_seeds[names(z_scores)],
-        z_score = z_scores,
-        log_pval = log_pvalues,
-        pval_bh = pvalues_corrected,
-        signal_locfdr = pvalues_corrected < 0.05,
-        signal_95 = z_scores >= threshold_95,
-        signal_final = pvalues_corrected < 0.05 & z_scores >= threshold_95
-    )
-}
-
-
-# ============================================================
-# process_group()
-# ------------------------------------------------------------
-# CHANGEMENT : RWR_results est desormais attendu en scores RWR
-# BRUTS. L'imputation des seeds (median des non-seeds) se fait
-# toujours en amont sur les scores bruts. La normalisation Z-score
-# est ensuite appliquee APRES le regroupement, directement sur la
-# matrice scores_imputed (genes x patients valides) : normalize_rwr_score()
-# fait la moyenne ET construit un null matche sur N = nb de patients
-# valides (ncol(scores_imputed)), en reechantillonnant la banque de
-# permutations precalculee (aucun recalcul RWR).
-# ============================================================
-process_group <- function(patient_ids = NULL, RWR_results, seeds, permutation_bank) {
-    # Par défaut : tous les patients
+process_profiles <- function(patient_ids = NULL, RWR_results, seeds, permutation_bank) {
+    # Default: all patients
     if (is.null(patient_ids)) patient_ids <- colnames(RWR_results)
 
-    # Vérification
+    # Check
     invalid <- patient_ids[!patient_ids %in% colnames(RWR_results)]
-    if (length(invalid) > 0) warning("Patients non trouvés : ", paste(invalid, collapse = ", "))
+    if (length(invalid) > 0) warning("Patients not found: ", paste(invalid, collapse = ", "))
     patient_ids <- patient_ids[patient_ids %in% colnames(RWR_results)]
 
-    # Pour chaque patient : remplacer les scores des seeds par la médiane des non-seeds (scores bruts)
-    scores_imputed <- sapply(patient_ids, function(pid) {
+    if (length(patient_ids) == 0) {
+        message("No valid patient in the selection")
+        return(NULL)
+    }
+
+    # For each patient: replace seed scores with the median of non-seed scores (raw scores)
+    # sapply(simplify = FALSE) + do.call(cbind, ...) guarantees a matrix
+    # even when patient_ids has length 1 (plain sapply would return a vector)
+    scores_list <- sapply(patient_ids, function(pid) {
         scores <- RWR_results[, pid]
         seed_genes <- seeds[[pid]]
         is_seed <- rownames(RWR_results) %in% seed_genes
 
-        # Médiane calculée sans les seeds
+        # Median computed without the seeds
         median_nonseed <- median(scores[!is_seed], na.rm = TRUE)
 
-        # Remplacement des scores seeds par la médiane
+        # Replace seed scores with the median
         scores[is_seed] <- median_nonseed
 
         return(scores)
-    })
+    }, simplify = FALSE)
 
-    # scores_imputed : matrice gènes x patients
+    scores_imputed <- do.call(cbind, scores_list)
     rownames(scores_imputed) <- rownames(RWR_results)
+    colnames(scores_imputed) <- patient_ids
 
-    # Filtre patients avec trop de NA
+    # Filter patients with too many NAs
     na_prop <- colMeans(is.na(scores_imputed))
     excluded <- patient_ids[na_prop > 0.5]
-    if (length(excluded) > 0) message("Patients exclus (>50% NA) : ", paste(excluded, collapse = ", "))
+    if (length(excluded) > 0) message("Patients excluded (>50% NA): ", paste(excluded, collapse = ", "))
     scores_imputed <- scores_imputed[, na_prop <= 0.5, drop = FALSE]
 
     if (ncol(scores_imputed) == 0) {
-        message("Aucun patient valide dans ce groupe")
+        message("No valid patient in this group")
         return(NULL)
     }
 
-    # Score moyen brut par gène, conserve pour reporting/comparaison
+    # Mean raw score per gene (= patient's raw score if N = 1), kept for reporting/comparison
     mean_scores_raw <- rowMeans(scores_imputed, na.rm = TRUE)
 
-    # --- Normalisation Z-score via banque de permutations ---
-    # scores_imputed (genes x N patients valides) est passe directement :
-    # normalize_rwr_score fait la moyenne des patients ET construit le null
-    # en agregeant N profils tires de la banque (N = ncol(scores_imputed)),
-    # donc le null correspond exactement a la statistique testee (moyenne de groupe).
+    # --- Z-score normalization via the permutation bank ---
+    # scores_imputed (genes x N valid patients) is passed directly:
+    # normalize_rwr_score averages the patients AND builds the null by
+    # aggregating N profiles drawn from the bank (N = ncol(scores_imputed),
+    # N = 1 included), so the null exactly matches the tested statistic.
     z_scores <- normalize_rwr_score(
         scores_imputed,
         permutation_bank = permutation_bank,
@@ -207,11 +183,11 @@ process_group <- function(patient_ids = NULL, RWR_results, seeds, permutation_ba
     )
     z_scores <- z_scores[is.finite(z_scores)]
 
-    # Pipeline locfdr + correction, sur les z-scores de groupe
+    # locfdr + correction pipeline, on the z-scores (single patient or group)
     log_pvalues <- my_locfdr_robust(z_scores)
     pvalues_safe <- exp(pmax(log_pvalues, -745))
     pvalues_corrected <- p.adjust(pvalues_safe, method = "BH")
-    threshold_90 <- quantile(z_scores, 0.75, na.rm = TRUE)
+    threshold_75 <- quantile(z_scores, 0.75, na.rm = TRUE)
 
     df <- data.frame(
         gene           = names(z_scores),
@@ -221,14 +197,14 @@ process_group <- function(patient_ids = NULL, RWR_results, seeds, permutation_ba
         log_pval       = log_pvalues,
         pval_bh        = pvalues_corrected,
         signal_locfdr  = pvalues_corrected < 0.05,
-        signal_90      = z_scores >= threshold_90,
-        signal_final   = pvalues_corrected < 0.05 & z_scores >= threshold_90
+        signal_75      = z_scores >= threshold_75,
+        signal_final   = pvalues_corrected < 0.05 & z_scores >= threshold_75
     )
 
     cat(
-        "Groupe :", length(patient_ids), "patients demandés |",
-        ncol(scores_imputed), "patients valides |",
-        sum(df$signal_final), "gènes signal\n"
+        "Profile(s):", length(patient_ids), "patient(s) requested |",
+        ncol(scores_imputed), "patient(s) valid |",
+        sum(df$signal_final), "signal genes\n"
     )
 
     return(df)
@@ -236,18 +212,18 @@ process_group <- function(patient_ids = NULL, RWR_results, seeds, permutation_ba
 
 
 # ============================================================
-# Exemple d'utilisation
+# Usage example
 # ============================================================
-# # Construire la banque UNE FOIS (voir rwr_normalization.R), a partir
-# # de la distribution reelle du nombre de seeds par patient :
+# # Build the bank ONCE (see rwr_normalization.R), from the observed
+# # distribution of the number of seeds per patient:
 # observed_seed_counts <- sapply(seeds, length)
 # permutation_bank <- build_permutation_bank(
 #     RWR_net, seed_sizes = observed_seed_counts,
 #     n_permutations = 2000, mc.cores = 4
 # )
 #
-# # Patient unique :
-# res_patient <- process_patient("Patient_1", HPE_results, HPE_seeds, permutation_bank)
+# # Single patient (N = 1, same logic as the group) :
+# res_patient <- process_profiles("Patient_1", HPE_results, HPE_seeds, permutation_bank)
 #
-# # Groupe :
-# res_group <- process_group(sample(colnames(RWR_results), 20), RWR_results, seeds, permutation_bank)
+# # Group :
+# res_group <- process_profiles(sample(colnames(RWR_results), 20), RWR_results, seeds, permutation_bank)

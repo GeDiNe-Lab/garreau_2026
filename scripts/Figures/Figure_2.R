@@ -14,13 +14,7 @@ library(scales)
 library(viridis)
 
 # Setting working directory
-rstudioapi::getSourceEditorContext()$path %>%
-    str_split("/") %>%
-    unlist() %>%
-    head(-4) %>%
-    str_c(collapse = "/") %>%
-    str_c("/") %>%
-    setwd()
+setwd(paste(here::here(), "projects", sep = "/"))
 
 # Loading custom functions
 source("article/scripts/custom_fct.R")
@@ -201,22 +195,9 @@ HPE_seeds <- HPE_variants %>%
     unique()
 
 #  Enrichment on seeds
-HPE_seeds_GO <- run_ora_gobp(
-    genelist = HPE_seeds,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000,
-    noRedundant = TRUE
-)
-
-HPE_seeds_HPO <- run_ora_hpo(
-    genelist = HPE_seeds,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000
-)
+HPE_seeds_GO <- run_ora_gobp(HPE_seeds)
+HPE_seeds_HPO <- run_ora_hpo(HPE_seeds)
+HPE_seeds_Reactome <- run_ora_reactome(HPE_seeds)
 
 # ============================================================
 # IOP
@@ -262,22 +243,9 @@ IOP_seeds <- IOP_variants %>%
     unique()
 
 #  Enrichment on seeds
-IOP_seeds_GO <- run_ora_gobp(
-    genelist = IOP_seeds,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000,
-    noRedundant = TRUE
-)
-
-IOP_seeds_HPO <- run_ora_hpo(
-    genelist = IOP_seeds,
-    interestGeneType = "genesymbol",
-    fdrThr = 0.05,
-    minNum = 5,
-    maxNum = 2000
-)
+IOP_seeds_GO <- run_ora_gobp(IOP_seeds)
+IOP_seeds_HPO <- run_ora_hpo(IOP_seeds)
+IOP_seeds_Reactome <- run_ora_reactome(IOP_seeds)
 
 p_HPE_func <- make_pie_chart(HPE_variants_function, title = "HPE - Variant genomic location")
 p_HPE_clnsig <- make_pie_chart(HPE_CLNSIG, title = "HPE - ClinVar significance", top_n = 8)
@@ -285,6 +253,7 @@ p_HPE_pred <- make_pie_chart(HPE_PRED_effect, title = "HPE - Predicted effect", 
 
 p_HPE_go <- plot_ora_dotplot(HPE_seeds_GO, n = 20, title = "HPE - Top 20 GO-BP")
 p_HPE_hpo <- plot_ora_dotplot(HPE_seeds_HPO, n = 20, title = "HPE - Top 20 HPO")
+p_HPE_reactome <- plot_ora_dotplot(HPE_seeds_Reactome, n = 20, title = "HPE - Top 20 Reactome pathways")
 
 p_IOP_func <- make_pie_chart(IOP_variants_function, title = "IOP - Variant genomic location")
 p_IOP_clnsig <- make_pie_chart(IOP_CLNSIG, title = "IOP - ClinVar significance", top_n = 8)
@@ -292,6 +261,7 @@ p_IOP_pred <- make_pie_chart(IOP_PRED_effect, title = "IOP - Predicted effect", 
 
 p_IOP_go <- plot_ora_dotplot(IOP_seeds_GO, n = 20, title = "IOP - Top 20 GO-BP")
 p_IOP_hpo <- plot_ora_dotplot(IOP_seeds_HPO, n = 20, title = "IOP - Top 20 HPO")
+p_IOP_reactome <- plot_ora_dotplot(IOP_seeds_Reactome, n = 20, title = "IOP - Top 20 Reactome pathways")
 
 # ============================================================
 # Saving plots
@@ -303,13 +273,14 @@ ggsave("article/figures/Figure_2/HPE_CLNSIG_pie.png", plot = p_HPE_clnsig, width
 ggsave("article/figures/Figure_2/HPE_PRED_effect_pie.png", plot = p_HPE_pred, width = 12, height = 6, dpi = 300)
 ggsave("article/figures/Figure_2/HPE_seeds_GO_dotplot.png", plot = p_HPE_go, width = 10, height = 8, dpi = 300)
 ggsave("article/figures/Figure_2/HPE_seeds_HPO_dotplot.png", plot = p_HPE_hpo, width = 10, height = 8, dpi = 300)
+ggsave("article/figures/Figure_2/HPE_seeds_Reactome_dotplot.png", plot = p_HPE_reactome, width = 10, height = 8, dpi = 300)
 
 ggsave("article/figures/Figure_2/IOP_Func_refGene_pie.png", plot = p_IOP_func, width = 12, height = 6, dpi = 300)
 ggsave("article/figures/Figure_2/IOP_CLNSIG_pie.png", plot = p_IOP_clnsig, width = 12, height = 6, dpi = 300)
 ggsave("article/figures/Figure_2/IOP_PRED_effect_pie.png", plot = p_IOP_pred, width = 12, height = 6, dpi = 300)
 ggsave("article/figures/Figure_2/IOP_seeds_GO_dotplot.png", plot = p_IOP_go, width = 10, height = 8, dpi = 300)
 ggsave("article/figures/Figure_2/IOP_seeds_HPO_dotplot.png", plot = p_IOP_hpo, width = 10, height = 8, dpi = 300)
-
+ggsave("article/figures/Figure_2/IOP_seeds_Reactome_dotplot.png", plot = p_IOP_reactome, width = 10, height = 8, dpi = 300)
 # ============================================================
 # Summary tables (readable by a biologist)
 # ============================================================
@@ -359,6 +330,14 @@ IOP_seeds_HPO_summary <- IOP_seeds_HPO %>%
     dplyr::select(geneSet, description, size, overlap, enrichmentRatio, pValue, FDR, userId) %>%
     arrange(-enrichmentRatio)
 
+HPE_seeds_Reactome_summary <- HPE_seeds_Reactome %>%
+    dplyr::select(geneSet, description, size, overlap, enrichmentRatio, pValue, FDR, userId) %>%
+    arrange(-enrichmentRatio)
+
+IOP_seeds_Reactome_summary <- IOP_seeds_Reactome %>%
+    dplyr::select(geneSet, description, size, overlap, enrichmentRatio, pValue, FDR, userId) %>%
+    arrange(-enrichmentRatio)
+
 write_csv(seed_count_per_patient, "article/tables/Figure_2/seed_count_per_patient.csv")
 write_csv(HPE_variant_function_summary, "article/tables/Figure_2/HPE_variant_function_summary.csv")
 write_csv(IOP_variant_function_summary, "article/tables/Figure_2/IOP_variant_function_summary.csv")
@@ -370,6 +349,8 @@ write_csv(HPE_seeds_GO_summary, "article/tables/Figure_2/HPE_seeds_GO_summary.cs
 write_csv(IOP_seeds_GO_summary, "article/tables/Figure_2/IOP_seeds_GO_summary.csv")
 write_csv(HPE_seeds_HPO_summary, "article/tables/Figure_2/HPE_seeds_HPO_summary.csv")
 write_csv(IOP_seeds_HPO_summary, "article/tables/Figure_2/IOP_seeds_HPO_summary.csv")
+write_csv(HPE_seeds_Reactome_summary, "article/tables/Figure_2/HPE_seeds_Reactome_summary.csv")
+write_csv(IOP_seeds_Reactome_summary, "article/tables/Figure_2/IOP_seeds_Reactome_summary.csv")
 
 library(openxlsx)
 
@@ -393,6 +374,8 @@ write_single_xlsx(HPE_seeds_GO_summary, "article/tables/Figure_2/HPE_seeds_GO_su
 write_single_xlsx(IOP_seeds_GO_summary, "article/tables/Figure_2/IOP_seeds_GO_summary.xlsx", "IOP_seeds_GO")
 write_single_xlsx(HPE_seeds_HPO_summary, "article/tables/Figure_2/HPE_seeds_HPO_summary.xlsx", "HPE_seeds_HPO")
 write_single_xlsx(IOP_seeds_HPO_summary, "article/tables/Figure_2/IOP_seeds_HPO_summary.xlsx", "IOP_seeds_HPO")
+write_single_xlsx(HPE_seeds_Reactome_summary, "article/tables/Figure_2/HPE_seeds_Reactome_summary.xlsx", "HPE_seeds_Reactome")
+write_single_xlsx(IOP_seeds_Reactome_summary, "article/tables/Figure_2/IOP_seeds_Reactome_summary.xlsx", "IOP_seeds_Reactome")
 
 # ============================================================
 # Seed frequency per gene (post network filtering), HPE vs IOP
