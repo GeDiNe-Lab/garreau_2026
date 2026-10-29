@@ -4,7 +4,6 @@ library(tidyverse)
 
 setwd(paste(here::here(), "projects", sep = "/"))
 
-
 # Loading custom functions
 source("article/scripts/custom_fct.R")
 
@@ -34,20 +33,14 @@ authors_meta_f <- filter(
 
 sc_counts_f1 <- sc_counts[, authors_meta_f$barcode]
 
-nrow(sc_counts_f1)
-
 # counts: genes x cells
 n_cells <- ncol(sc_counts_f1)
 pct_detected <- Matrix::rowSums(sc_counts_f1 > 0) / n_cells # fraction of cells expressing the gene
 total_counts <- Matrix::rowSums(sc_counts_f1) # total UMI per gene
 
+# filtering genes based on expression and number of cells expressing them
 keep <- pct_detected >= 0.005 & total_counts >= 25
 sc_counts_f <- sc_counts_f1[keep, ]
-dim(sc_counts_f)
-0.005 * 4659
-
-sc_counts_f <- sc_counts_f1[which(rowSums(sc_counts_f1) > 25), ]
-nrow(sc_counts_f)
 sc_genes <- rownames(sc_counts_f)
 
 save(sc_genes, file = "article/transit_data/sc_genes.RData")

@@ -9,6 +9,11 @@
 #           search_log.tsv               gene, level, hits, date, sort, PMIDs
 #           PubMed_mechanism_queries_filled.tsv  tracking grid with date + hits
 # Records are ordered by relevance ("Best match"), like the website default.
+#
+# UPDATE (Oct 2026): after re-analysis (patients without seeds removed,
+# CDS-weighted null, Orphanet HPE gene list), only the genes that are new
+# seed+signal candidates, plus GLI3 (no longer a control), are queried.
+# The list is computed from the new network recap (genes_to_rate below).
 # =============================================================================
 
 library(rentrez)
@@ -29,7 +34,24 @@ for (lv in c("Direct", "Related", "General")) {
     dir.create(file.path(out_dir, lv), recursive = TRUE, showWarnings = FALSE)
 }
 
-queries <- fread("article/transit_data/PubMed_mechanism_queries.tsv")
+# queries <- fread("article/transit_data/PubMed_mechanism_queries.tsv")  # Sept 2026 run (45 genes)
+
+# --- Genes to rate after re-analysis (Oct 2026) ---------------------------
+recap <- fread("article/tables/Figure_4/HPE_full_cohort_signal_seed_node_recap_refined.csv")
+tiers <- fread("article/transit_data/Candidate_genes_tiers_EN.tsv")
+
+new_candidates <- recap[condition == "seed+signal" & is.na(HPE_genes), gene] # Orphanet genes excluded
+genes_to_rate <- union(setdiff(new_candidates, tiers$Gene), "GLI3") # new genes + GLI3 (no longer a control)
+genes_dropped <- setdiff(tiers[!grepl("Known HPE gene", Status), Gene], new_candidates)
+
+cat("To rate:", paste(genes_to_rate, collapse = ", "), "\n")
+cat("No longer candidates:", paste(genes_dropped, collapse = ", "), "\n")
+
+queries <- fread("article/transit_data/PubMed_mechanism_queries_updated.tsv")
+queries <- queries[Gene %in% genes_to_rate]
+missing_q <- setdiff(genes_to_rate, queries$Gene)
+if (length(missing_q) > 0) stop("No query rows for: ", paste(missing_q, collapse = ", "), " (add them to the tsv)")
+stopifnot(nrow(queries) == 3 * length(genes_to_rate))
 
 # efetch numbers records from 1 in each batch: shift the numbers of later batches
 renumber <- function(txt, offset) {

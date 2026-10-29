@@ -1,21 +1,7 @@
-# =============================================================================
-# MGI phenotype query for the 45 HPE candidate genes
-# -----------------------------------------------------------------------------
-# 1. Download the MGI public reports (genotype-phenotype annotations,
-#    human-mouse orthology, marker list, MP ontology).
-# 2. Map the human candidate symbols to their mouse orthologs.
-# 3. Retrieve all MP annotations for genotypes involving each gene
-#    (single-gene genotypes, conditional alleles kept, transgenes ignored).
-# 4. Rate each gene with the in vivo scale of the tier framework
-#    (Strong / Moderate / Limited / None) and compare with the curated table.
-#
-# Reports are described at https://www.informatics.jax.org/downloads/reports/index.html
-# Record the download date in the Methods (written to MGI_download_date.txt).
-# =============================================================================
-setwd(paste(here::here(), "projects", sep = "/"))
-
 library(data.table)
 library(ontologyIndex) # install.packages("ontologyIndex")
+
+setwd(paste(here::here(), "projects", sep = "/"))
 
 out_dir <- "article/transit_data/MGI_reports"
 dir.create(out_dir, showWarnings = FALSE)
@@ -32,18 +18,25 @@ for (f in reports) {
     print(dest)
     if (!file.exists(dest)) download.file(paste0(base_url, f), dest, mode = "wb")
 }
-writeLines(format(Sys.Date()), file.path(out_dir, "article/transit_data/MGI_reports/MGI_download_date.txt"))
 
-# -----------------------------------------------------------------------------
-# Candidate genes (human symbols) and current curated rating
-# -----------------------------------------------------------------------------
-cand <- fread("article/transit_data/Candidate_genes_tiers_EN.tsv")
-cand <- cand[!grepl("Known HPE gene", `Mouse KO phenotype`)] # drop the 5 controls
-stopifnot(nrow(cand) == 45)
-cand <- cand[, .(
-    human_symbol = Gene, Tier,
-    curated_in_vivo = `Developmental evidence (mouse)`
-)]
+date_file <- file.path(out_dir, "MGI_download_date.txt")
+if (!file.exists(date_file)) writeLines(format(Sys.Date()), date_file)
+cat("MGI reports downloaded on:", readLines(date_file), "\n")
+
+# --- Genes to rate after re-analysis (Oct 2026) ---------------------------
+recap <- fread("article/tables/Figure_4/HPE_full_cohort_signal_seed_node_recap_refined.csv")
+tiers <- fread("article/transit_data/Candidate_genes_tiers_EN.tsv")
+
+new_candidates <- recap[condition == "seed+signal" & is.na(HPE_genes), gene] # Orphanet genes excluded
+genes_to_rate <- union(setdiff(new_candidates, tiers$Gene), "GLI3") # new genes + GLI3 (no longer a control)
+genes_dropped <- setdiff(tiers[!grepl("Known HPE gene", Status), Gene], new_candidates)
+
+cat("To rate:", paste(genes_to_rate, collapse = ", "), "\n")
+cat("No longer candidates:", paste(genes_dropped, collapse = ", "), "\n")
+
+# no previous curated rating for these genes: "agreement" will read
+# "MGI higher - check" for every gene with a phenotype, which can be ignored
+cand <- data.table(human_symbol = genes_to_rate, Tier = NA_character_, curated_in_vivo = "None")
 
 # -----------------------------------------------------------------------------
 # Human -> mouse orthologs
@@ -175,7 +168,8 @@ fwrite(
             allelic_composition, background, mp_id, mp_name, level, pmid
         )
     ],
-    file.path(out_dir, "MGI_annotations_candidates_long.tsv"),
+    # file.path(out_dir, "MGI_annotations_candidates_long.tsv"),  # Sept 2026 run
+    file.path(out_dir, "MGI_annotations_candidates_long_update.tsv"),
     sep = "\t"
 )
 
@@ -218,7 +212,8 @@ summ[, agreement := fcase(
 )]
 
 setorder(summ, Tier, human_symbol)
-fwrite(summ, file.path(out_dir, "MGI_summary_candidates.tsv"), sep = "\t")
+# fwrite(summ, file.path(out_dir, "MGI_summary_candidates.tsv"), sep = "\t")  # Sept 2026 run
+fwrite(summ, file.path(out_dir, "MGI_summary_candidates_update.tsv"), sep = "\t")
 
 print(summ[, .N, by = agreement])
 print(summ[
