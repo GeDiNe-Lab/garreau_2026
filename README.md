@@ -72,16 +72,6 @@ Holoprosencephaly (HPE) remains genetically unsolved in most patients, and part 
 | S12 Table | Candidate subnetwork (node and edge lists) |
 | S13 Table | Evidence ratings and tiers of the candidate genes |
 
-## Input data
-
-The scripts expect the following inputs, which are not distributed in this repository:
-
-- **iPSC RNA-seq counts and sample metadata** (Panasenkava et al. 2025). Raw data are under submission to the European Genome-phenome Archive (EGA) and can be provided by the authors upon reasonable request.
-- **Single-cell RNA-seq atlas** of Zeng et al. 2023, weeks 3 to 5, Gene Expression Omnibus [GSE155121](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE155121).
-- **Annotated exome variants** of the HPE and POI patients. These data cannot be shared publicly because of patient consent.
-- **gnomAD v4.1.2 constraint metrics** (`gnomad.v4.1.2.constraint_metrics.tsv.bgz`), available from the [gnomAD downloads page](https://gnomad.broadinstitute.org/downloads).
-- **MGI reports**, downloaded automatically by `MGI_query.R` from the [MGI FTP](https://www.informatics.jax.org/downloads/reports/).
-
 ## Requirements
 
 R with the following packages:
@@ -92,11 +82,3 @@ R with the following packages:
 - **Data handling:** `tidyverse`, `data.table`, `Matrix`, `here`
 - **Single-cell:** `Seurat`
 - **Plotting:** `ggplot2`, `ggrepel`, `ggpubr`, `ggsignif`, `patchwork`, `circlize`, `paletteer`, `colorblindr`, `factoextra`, `svglite`
-
-## Contact
-
-Jules Garreau, GeDiNe team, Univ Rennes, CNRS, INSERM, IGDR (Institut de Génétique et Développement de Rennes), UMR 6290, ERL U1305, F-35000 Rennes, France.
-
-## Citation
-
-If you use this code, please cite the article above.
