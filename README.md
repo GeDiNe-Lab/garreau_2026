@@ -14,6 +14,25 @@ Code and supplementary tables for:
 └── README.md
 ```
 
+
+## Supplementary tables
+
+| Table | Content |
+|---|---|
+| S1 Table | Ancestry of the HPE and POI patients (EthSEQ) |
+| S2 Table | RNA-seq samples used to build the co-expression network |
+| S3 Table | In silico predictors and thresholds used in the pathogenicity metascore |
+| S4 Table | Established HPE genes (Tekendo-Ngongang et al. 2026; Dubourg et al. 2018), network position and seed counts |
+| S5 Table | PubMed queries used to rate the mechanistic link to HPE |
+| S6 Table | Network gene summary (degree, betweenness, closeness, eigenvector centrality) |
+| S7 Table | Enrichment of the 500 most connected network genes |
+| S8 Table | Seed variant composition and seed counts per patient |
+| S9 Table | Seed frequency per gene in the HPE and POI cohorts |
+| S10 Table | Enrichment of the HPE and POI seed genes |
+| S11 Table | Enrichment of the HPE signal genes |
+| S12 Table | Candidate subnetwork (node and edge lists) |
+| S13 Table | Evidence ratings and tiers of the candidate genes |
+
 ## Scripts
 
 ### `scripts/`
@@ -43,24 +62,6 @@ Code and supplementary tables for:
 | `rwr_results_analysis.R` | Signal genes, Z-score distributions, rank vs degree and signal gene enrichment (Fig 5–7, S11 Table). |
 | `rwr_cohort_permutations.R` | Cohort label permutation test on the number of signal genes. |
 | `rwr_subnetwork_analysis.R` | Builds the candidate subnetwork and the gene recap table (Fig 8, S12 Table). |
-
-## Supplementary tables
-
-| Table | Content |
-|---|---|
-| S1 Table | Ancestry of the HPE and POI patients (EthSEQ) |
-| S2 Table | RNA-seq samples used to build the co-expression network |
-| S3 Table | In silico predictors and thresholds used in the pathogenicity metascore |
-| S4 Table | Established HPE genes (Tekendo-Ngongang et al. 2026; Dubourg et al. 2018), network position and seed counts |
-| S5 Table | PubMed queries used to rate the mechanistic link to HPE |
-| S6 Table | Network gene summary (degree, betweenness, closeness, eigenvector centrality) |
-| S7 Table | Enrichment of the 500 most connected network genes |
-| S8 Table | Seed variant composition and seed counts per patient |
-| S9 Table | Seed frequency per gene in the HPE and POI cohorts |
-| S10 Table | Enrichment of the HPE and POI seed genes |
-| S11 Table | Enrichment of the HPE signal genes |
-| S12 Table | Candidate subnetwork (node and edge lists) |
-| S13 Table | Evidence ratings and tiers of the candidate genes |
 
 ## Requirements
 
