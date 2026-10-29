@@ -43,7 +43,8 @@ Code and supplementary tables for:
 | `tprimrna.R` | Normalizes the iPSC RNA-seq data and builds the co-expression network. |
 | `patient_data_HPE_POI.R` | Filters the exome variants of the HPE and POI patients and selects the seed variants. |
 | `rwr.R` | Runs one Random Walk with Restart per patient from its seed genes. |
-| `rwr_normalization_fct.R` | Functions to build the permutation bank and Z-score normalize RWR profiles. |
+| `cds_weighted_bank_generation.R` | Builds the permutation bank with random seeds drawn in proportion to CDS length. |
+| `rwr_normalization_fct.R` | Functions Z-score normalize RWR profiles. |
 | `signal_gene_fct.R` | Functions to aggregate patient profiles, estimate the empirical null and call signal genes. |
 | `ora_fct.R` | Functions for over-representation analyses (GO-BP, HPO, Reactome) and dot plots. |
 | `custom_fct.R` | Shared helper functions (RWR, gene ID conversion, plotting theme). |
@@ -58,7 +59,6 @@ Code and supplementary tables for:
 | `ethseq_analysis.R` | Infers the ancestry of the HPE and POI patients with EthSEQ (S1 Table). |
 | `network_analysis.R` | Network topology and enrichment of the 500 most connected genes (Fig 1–2, S6–S7 Tables). |
 | `seeds_analysis.R` | Seed composition, seed counts, retention tests and seed enrichment (Fig 3–4, S4, S8–S10 Tables). |
-| `cds_weighted_bank_generation.R` | Builds the permutation bank with random seeds drawn in proportion to CDS length. |
 | `rwr_results_analysis.R` | Signal genes, Z-score distributions, rank vs degree and signal gene enrichment (Fig 5–7, S11 Table). |
 | `rwr_cohort_permutations.R` | Cohort label permutation test on the number of signal genes. |
 | `rwr_subnetwork_analysis.R` | Builds the candidate subnetwork and the gene recap table (Fig 8, S12 Table). |
