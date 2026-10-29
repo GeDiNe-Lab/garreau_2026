@@ -4,16 +4,6 @@ Code and supplementary tables for:
 
 > Garreau J. et al. (2026). *A context-specific co-expression network and patient-wise network propagation to prioritize candidate genes in holoprosencephaly.* [Journal, DOI to be added]
 
-## Overview
-
-Holoprosencephaly (HPE) remains genetically unsolved in most patients, and part of the missing heritability is thought to be oligogenic. This repository contains the analysis pipeline used to:
-
-1. build a co-expression network from an iPSC model of anterior neuroectoderm exposed to a cyclopamine (SHH inhibitor) gradient, restricted to genes expressed in the early human forebrain;
-2. select rare, potentially damaging variants in each patient's exome as seed genes;
-3. run a Random Walk with Restart (RWR) from each patient's seeds, aggregate the profiles per cohort and detect signal genes against a permutation null;
-4. compare the HPE cohort with a control cohort (premature ovarian insufficiency, POI);
-5. rate the genes that are both signal genes and seeds on three lines of evidence (mechanistic link to HPE, mouse phenotype, loss-of-function constraint).
-
 ## Repository structure
 
 ```
